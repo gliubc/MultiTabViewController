@@ -1,5 +1,6 @@
 #import "MultiTabViewController.h"
-#import <Masonry.h>
+
+static const UILayoutPriority kMediumLayoutPriority = 500.0;
 
 @interface MultiTabViewController () <UIScrollViewDelegate>
 
@@ -129,18 +130,26 @@
     }
     
     UIView *menuContainerView = [UIView new];
+    menuContainerView.translatesAutoresizingMaskIntoConstraints = NO;
     self.tabMenuContainerView = menuContainerView;
     [self.tabMenu addSubview:menuContainerView];
-    [menuContainerView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.bottom.equalTo(self.tabMenu);
-    }];
+    [NSLayoutConstraint activateConstraints:@[
+        [menuContainerView.leftAnchor constraintEqualToAnchor:self.tabMenu.leftAnchor],
+        [menuContainerView.topAnchor constraintEqualToAnchor:self.tabMenu.topAnchor],
+        [menuContainerView.rightAnchor constraintEqualToAnchor:self.tabMenu.rightAnchor],
+        [menuContainerView.bottomAnchor constraintEqualToAnchor:self.tabMenu.bottomAnchor],
+    ]];
     
     UIScrollView *menuScrollView = [UIScrollView new];
+    menuScrollView.translatesAutoresizingMaskIntoConstraints = NO;
     menuScrollView.showsHorizontalScrollIndicator = NO;
     [menuContainerView addSubview:menuScrollView];
-    [menuScrollView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.bottom.equalTo(menuContainerView);
-    }];
+    [NSLayoutConstraint activateConstraints:@[
+        [menuScrollView.leftAnchor constraintEqualToAnchor:menuContainerView.leftAnchor],
+        [menuScrollView.topAnchor constraintEqualToAnchor:menuContainerView.topAnchor],
+        [menuScrollView.rightAnchor constraintEqualToAnchor:menuContainerView.rightAnchor],
+        [menuScrollView.bottomAnchor constraintEqualToAnchor:menuContainerView.bottomAnchor],
+    ]];
     for (UIGestureRecognizer *gestureRecognizer in menuScrollView.gestureRecognizers) {
         if (self.navigationController.interactivePopGestureRecognizer) {
             [gestureRecognizer requireGestureRecognizerToFail:self.navigationController.interactivePopGestureRecognizer];
@@ -148,13 +157,17 @@
     }
     
     UIView *menuView = [UIView new];
+    menuView.translatesAutoresizingMaskIntoConstraints = NO;
     self.tabMenuView = menuView;
     [menuScrollView addSubview:menuView];
-    [menuView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.bottom.equalTo(menuScrollView);
-        make.height.equalTo(self.tabMenu);
-    }];
-    
+    [NSLayoutConstraint activateConstraints:@[
+        [menuView.leftAnchor constraintEqualToAnchor:menuScrollView.leftAnchor],
+        [menuView.topAnchor constraintEqualToAnchor:menuScrollView.topAnchor],
+        [menuView.rightAnchor constraintEqualToAnchor:menuScrollView.rightAnchor],
+        [menuView.bottomAnchor constraintEqualToAnchor:menuScrollView.bottomAnchor],
+        [menuView.heightAnchor constraintEqualToAnchor:self.tabMenu.heightAnchor],
+    ]];
+        
     NSInteger menuCount = [self.tabTitles count];
     self.tabMenus = [NSMutableArray new];
     self.tabMenuTitles = [NSMutableArray new];
@@ -163,37 +176,48 @@
     UIView *lastMenu = nil;
     for (int i = 0; i < menuCount; i++) {
         UIView *menu = [UIView new];
+        menu.translatesAutoresizingMaskIntoConstraints = NO;
         [self.tabMenus addObject:menu];
         menu.tag = i;
         
         CGFloat titleWidth = ceil([self.tabTitles[i] sizeWithAttributes:@{NSFontAttributeName:self.tabMenuFont}].width);
         
         [menuView addSubview:menu];
-        [menu mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.top.bottom.equalTo(menuView);
-            
-            if (self.tabMenuPadding) {
-                make.width.equalTo(@(titleWidth + 2 * self.tabMenuPadding));
-            } else {
-                make.width.greaterThanOrEqualTo(@(titleWidth + 2 * self.tabMenuMinimumPadding)).priorityHigh();
-                make.width.equalTo(menuContainerView).multipliedBy(1.0f / menuCount).priorityMedium();
-            }
-        }];
+        [NSLayoutConstraint activateConstraints:@[
+            [menu.topAnchor constraintEqualToAnchor:menuView.topAnchor],
+            [menu.bottomAnchor constraintEqualToAnchor:menuView.bottomAnchor],
+        ]];
+        if (self.tabMenuPadding) {
+            [NSLayoutConstraint activateConstraints:@[
+                [menu.widthAnchor constraintEqualToConstant:titleWidth + 2 * self.tabMenuPadding],
+            ]];
+        } else {
+            NSLayoutConstraint *highPriorityConstraint =[menu.widthAnchor constraintGreaterThanOrEqualToConstant:
+                                                         titleWidth + 2 * self.tabMenuMinimumPadding];
+            [highPriorityConstraint setPriority:UILayoutPriorityDefaultHigh];
+            NSLayoutConstraint *mediumPriorityConstraint = [menu.widthAnchor constraintEqualToAnchor:
+                                                            menuContainerView.widthAnchor multiplier:1.0f / menuCount];
+            [mediumPriorityConstraint setPriority:kMediumLayoutPriority];
+            [NSLayoutConstraint activateConstraints:@[
+                highPriorityConstraint,
+                mediumPriorityConstraint,
+            ]];
+        }
         
         if (i == 0) {
-            [menu mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.left.equalTo(menuView);
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [menu.leftAnchor constraintEqualToAnchor:menuView.leftAnchor],
+            ]];
         } else {
-            [menu mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.left.equalTo(lastMenu.mas_right);
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [menu.leftAnchor constraintEqualToAnchor:lastMenu.rightAnchor],
+            ]];
         }
         
         if (i == (menuCount - 1)) {
-            [menu mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.right.equalTo(menuView);
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [menu.rightAnchor constraintEqualToAnchor:menuView.rightAnchor],
+            ]];
         }
         
         lastMenu = menu;
@@ -202,6 +226,7 @@
         [menu addGestureRecognizer:recognizer];
         
         UILabel *title = [UILabel new];
+        title.translatesAutoresizingMaskIntoConstraints = NO;
         [self.tabMenuTitles addObject:title];
         title.text = self.tabTitles[i];
         title.font = self.tabMenuFont;
@@ -209,26 +234,32 @@
         title.numberOfLines = 0;
         title.textAlignment = NSTextAlignmentCenter;
         [menu addSubview:title];
-        [title mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.centerX.centerY.offset(0);
-            make.left.top.greaterThanOrEqualTo(menu).offset(0);
-            make.right.bottom.lessThanOrEqualTo(menu).offset(0);
-        }];
+        [NSLayoutConstraint activateConstraints:@[
+            [title.centerXAnchor constraintEqualToAnchor:menu.centerXAnchor],
+            [title.centerYAnchor constraintEqualToAnchor:menu.centerYAnchor],
+            [title.leftAnchor constraintGreaterThanOrEqualToAnchor:menu.leftAnchor],
+            [title.topAnchor constraintGreaterThanOrEqualToAnchor:menu.topAnchor],
+            [title.rightAnchor constraintLessThanOrEqualToAnchor:menu.rightAnchor],
+            [title.bottomAnchor constraintLessThanOrEqualToAnchor:menu.bottomAnchor],
+        ]];
         
         UIView *indicator = [UIView new];
+        indicator.translatesAutoresizingMaskIntoConstraints = NO;
         CGFloat indicatorWidth = self.tabMenuIndicatorWidth ?: (titleWidth + 2 * self.tabMenuIndicatorPadding);
         if (indicatorWidth < 0) {
             indicatorWidth = 0;
         }
         [self.tabMenuIndicators addObject:indicator];
         [menu addSubview:indicator];
-        [indicator mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.width.lessThanOrEqualTo(menu);
-            make.width.equalTo(@(indicatorWidth)).priorityLow();
-            make.centerX.equalTo(menu);
-            make.bottom.equalTo(menu);
-            make.height.equalTo(@(self.tabMenuIndicatorHeight));
-        }];
+        NSLayoutConstraint *lowPriorityIndicatorWidthConstraint = [indicator.widthAnchor constraintEqualToConstant:indicatorWidth];
+        [lowPriorityIndicatorWidthConstraint setPriority:UILayoutPriorityDefaultLow];
+        [NSLayoutConstraint activateConstraints:@[
+            [indicator.widthAnchor constraintLessThanOrEqualToAnchor:menu.widthAnchor],
+            lowPriorityIndicatorWidthConstraint,
+            [indicator.centerXAnchor constraintEqualToAnchor:menu.centerXAnchor],
+            [indicator.bottomAnchor constraintEqualToAnchor:menu.bottomAnchor],
+            [indicator.heightAnchor constraintEqualToConstant:self.tabMenuIndicatorHeight],
+        ]];
         
         [self.tabMenuBadges addObject:[NSNull null]];
     }
@@ -245,22 +276,30 @@
     }
     
     UIView *bodyContainerView = [UIView new];
+    bodyContainerView.translatesAutoresizingMaskIntoConstraints = NO;
     self.tabBodyContainerView = bodyContainerView;
     [self.tabBody addSubview:bodyContainerView];
-    [bodyContainerView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.bottom.equalTo(self.tabBody);
-    }];
+    [NSLayoutConstraint activateConstraints:@[
+        [bodyContainerView.leftAnchor constraintEqualToAnchor:self.tabBody.leftAnchor],
+        [bodyContainerView.topAnchor constraintEqualToAnchor:self.tabBody.topAnchor],
+        [bodyContainerView.rightAnchor constraintEqualToAnchor:self.tabBody.rightAnchor],
+        [bodyContainerView.bottomAnchor constraintEqualToAnchor:self.tabBody.bottomAnchor],
+    ]];
     
     UIScrollView *bodyScrollView = [UIScrollView new];
-    self.tabBodyScrollView = bodyScrollView;
+    bodyScrollView.translatesAutoresizingMaskIntoConstraints = NO;
     bodyScrollView.showsHorizontalScrollIndicator = NO;
     bodyScrollView.pagingEnabled = YES;
     bodyScrollView.scrollEnabled = self.tabScrollEnabled;
     bodyScrollView.delegate = self;
+    self.tabBodyScrollView = bodyScrollView;
     [bodyContainerView addSubview:bodyScrollView];
-    [bodyScrollView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.bottom.equalTo(bodyContainerView);
-    }];
+    [NSLayoutConstraint activateConstraints:@[
+        [bodyScrollView.leftAnchor constraintEqualToAnchor:bodyContainerView.leftAnchor],
+        [bodyScrollView.topAnchor constraintEqualToAnchor:bodyContainerView.topAnchor],
+        [bodyScrollView.rightAnchor constraintEqualToAnchor:bodyContainerView.rightAnchor],
+        [bodyScrollView.bottomAnchor constraintEqualToAnchor:bodyContainerView.bottomAnchor],
+    ]];
     for (UIGestureRecognizer *gestureRecognizer in bodyScrollView.gestureRecognizers) {
         if (self.navigationController.interactivePopGestureRecognizer) {
             [gestureRecognizer requireGestureRecognizerToFail:self.navigationController.interactivePopGestureRecognizer];
@@ -268,40 +307,46 @@
     }
     
     UIView *bodyView = [UIView new];
+    bodyView.translatesAutoresizingMaskIntoConstraints = NO;
     [bodyScrollView addSubview:bodyView];
-    [bodyView mas_makeConstraints:^(MASConstraintMaker *make) {
-        make.left.top.right.bottom.equalTo(bodyScrollView);
-        make.height.equalTo(bodyContainerView);
-    }];
+    [NSLayoutConstraint activateConstraints:@[
+        [bodyView.leftAnchor constraintEqualToAnchor:bodyScrollView.leftAnchor],
+        [bodyView.topAnchor constraintEqualToAnchor:bodyScrollView.topAnchor],
+        [bodyView.rightAnchor constraintEqualToAnchor:bodyScrollView.rightAnchor],
+        [bodyView.bottomAnchor constraintEqualToAnchor:bodyScrollView.bottomAnchor],
+        [bodyView.heightAnchor constraintEqualToAnchor:bodyContainerView.heightAnchor],
+    ]];
     
     UIView *lastView = nil;
     NSInteger count = self.tabViews.count;
     for (int i = 0; i < count; i++) {
         UIView *view = self.tabViews[i];
+        view.translatesAutoresizingMaskIntoConstraints = NO;
         
         if (self.tabControllers.count) {
             [self addChildViewController:self.tabControllers[i]];
         }
         
         [bodyView addSubview:view];
-        [view mas_makeConstraints:^(MASConstraintMaker *make) {
-            make.top.bottom.equalTo(bodyView);
-            make.width.equalTo(bodyContainerView);
-        }];
+        [NSLayoutConstraint activateConstraints:@[
+            [view.topAnchor constraintEqualToAnchor:bodyView.topAnchor],
+            [view.bottomAnchor constraintEqualToAnchor:bodyView.bottomAnchor],
+            [view.widthAnchor constraintEqualToAnchor:bodyContainerView.widthAnchor],
+        ]];
         
         if (i == 0) {
-            [view mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.left.equalTo(bodyView);
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [view.leftAnchor constraintEqualToAnchor:bodyView.leftAnchor],
+            ]];
         } else {
-            [view mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.left.equalTo(lastView.mas_right);
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [view.leftAnchor constraintEqualToAnchor:lastView.rightAnchor],
+            ]];
         }
         if (i == (count - 1)) {
-            [view mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.right.equalTo(bodyView);
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [view.rightAnchor constraintEqualToAnchor:bodyView.rightAnchor],
+            ]];
         }
         
         if (self.tabControllers.count) {
@@ -469,13 +514,17 @@
         if (indicatorWidth < 0) {
             indicatorWidth = 0;
         }
-        [indicator mas_remakeConstraints:^(MASConstraintMaker *make) {
-            make.width.lessThanOrEqualTo(menu);
-            make.width.equalTo(@(indicatorWidth)).priorityLow();
-            make.centerX.equalTo(menu);
-            make.bottom.equalTo(menu);
-            make.height.equalTo(@(self.tabMenuIndicatorHeight));
-        }];
+        
+        [indicator removeConstraints:indicator.constraints];
+        NSLayoutConstraint *lowPriorityIndicatorWidthConstraint = [indicator.widthAnchor constraintEqualToConstant:indicatorWidth];
+        [lowPriorityIndicatorWidthConstraint setPriority:UILayoutPriorityDefaultLow];
+        [NSLayoutConstraint activateConstraints:@[
+            [indicator.widthAnchor constraintLessThanOrEqualToAnchor:menu.widthAnchor],
+            lowPriorityIndicatorWidthConstraint,
+            [indicator.centerXAnchor constraintEqualToAnchor:menu.centerXAnchor],
+            [indicator.bottomAnchor constraintEqualToAnchor:menu.bottomAnchor],
+            [indicator.heightAnchor constraintEqualToConstant:self.tabMenuIndicatorHeight],
+        ]];
     }
 }
 
@@ -490,17 +539,22 @@
         }
         
         if (view) {
+            view.translatesAutoresizingMaskIntoConstraints = NO;
             [menu addSubview:view];
-            [view mas_makeConstraints:^(MASConstraintMaker *make) {
-                make.left.equalTo(title.mas_right).mas_offset(offset.x);
-                make.bottom.equalTo(title.mas_top).mas_offset(offset.y);
-                if (width) {
-                    make.width.equalTo(@(width));
-                }
-                if (height) {
-                    make.height.equalTo(@(height));
-                }
-            }];
+            [NSLayoutConstraint activateConstraints:@[
+                [view.leftAnchor constraintEqualToAnchor:title.rightAnchor constant:offset.x],
+                [view.bottomAnchor constraintEqualToAnchor:title.topAnchor constant:offset.y],
+            ]];
+            if (width) {
+                [NSLayoutConstraint activateConstraints:@[
+                    [view.widthAnchor constraintEqualToConstant:width],
+                ]];
+            }
+            if (height) {
+                [NSLayoutConstraint activateConstraints:@[
+                    [view.heightAnchor constraintEqualToConstant:height],
+                ]];
+            }
             self.tabMenuBadges[index] = view;
         } else {
             self.tabMenuBadges[index] = [NSNull null];
